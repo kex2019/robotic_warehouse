@@ -88,6 +88,8 @@ class RoboticWarehouse(gym.Env):
             if (x - cross_throughput) % (2 + shelve_throughput) < 2
             and self.map_width - cross_throughput > x and x >= cross_throughput
         ]
+        """ This makes setup faster. """
+        self.shelve_positions = set(self.shelve_positions)
 
         self.floor_positions = [(y, x) for y in range(self.map_height)
                                 for x in range(self.map_width)
@@ -101,6 +103,8 @@ class RoboticWarehouse(gym.Env):
                     RoboticWarehouse.FREE if (y, x) not in
                     self.shelve_positions else RoboticWarehouse.SHELF)
             self.map.append(row)
+        """ To make random choices O(1). """
+        self.shelve_positions = list(self.shelve_positions)
 
         self.__setup_env()
 
@@ -163,6 +167,7 @@ class RoboticWarehouse(gym.Env):
             while self.map[y][x] != RoboticWarehouse.SHELF:
                 y, x = random.choice(self.shelve_positions)
 
+            # Where to drop of package
             TO = np.array([0, 0])
 
             self.packages[identifier] = (np.array([y, x]), TO)
@@ -211,7 +216,7 @@ class RoboticWarehouse(gym.Env):
              ) -> (('robots', 'packages'), np.float64, bool, None):
         """ 
             Action: [Robotic Action...]
-                Robotic Action: X in [0, 4]
+                Robotic Action: X in [0, 5]
                     X == 0 = down
                     X == 1 = left
                     X == 2 = up
@@ -261,6 +266,8 @@ class RoboticWarehouse(gym.Env):
 
             If a robot issues drop or pickup in a position where it is not 
             supposed to be able to do that, nothing happends.
+
+        How do we handle different speeds?
         """
         for r, action in enumerate(actions):
             self.__actions[action](self.robots[r])
@@ -286,8 +293,9 @@ class RoboticWarehouse(gym.Env):
         print("Dropped Package")
 
     def seed(self, seed: int) -> None:
-        """ To make sure initialization is deterministic: set numpy seed. """
-        self.seed = seed
+        """ To make sure initialization is deterministic: set seeds yourself. """
+        random.seed(seed)
+        np.random.seed(seed)
 
     def render(self, mode: str = 'rgb_array') -> np.ndarray:
         global dynamic_import
@@ -327,11 +335,11 @@ class RoboticWarehouse(gym.Env):
                     # Error color
                     bitmap[y][x] = np.array([1, 1, 1])
 
-        print(bitmap.shape)
-
         dynamic_import["cv2"].imshow("Game", dynamic_import["cv2"].resize(
             bitmap, (960, 540)))
         dynamic_import["cv2"].waitKey(1)
+
+        return bitmap
 
     def __str__(self) -> str:
         return "RoboticWarehouse"
