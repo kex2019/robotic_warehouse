@@ -29,6 +29,11 @@ class RoboticWarehouse(gym.Env):
     PACKAGE = lambda x: (2, x)
     ROBOT = lambda x: (3, x)
 
+    UP = np.array([1, 0])
+    DOWN = np.array([-1, 0])
+    LEFT = np.array([0, -1])
+    RIGHT = np.array([0, 1])
+
     def __init__(
             self,
             robots: int = 1,  # Number of robots
@@ -112,6 +117,10 @@ class RoboticWarehouse(gym.Env):
             self.__move_down, self.__move_left, self.__move_up,
             self.__move_right, self.__pickup_package, self.__drop_package
         ]
+
+        self.action_space = ActionSpace(robots, len(self.__actions))
+        # TODO: ...
+        self.observation_space = None
 
     def __setup_env(self) -> None:
         """ 
@@ -228,7 +237,7 @@ class RoboticWarehouse(gym.Env):
         """
         self.spawn += self.spawn_rate
         """ Monte carlo spawning of packages  """
-        for _ in range(int(spawn)):
+        for _ in range(int(self.spawn)):
             if len(self.packages) == len(self.shelve_positions):
                 logger.error(
                     "Cannot spawn more packages -- No Free positions -- Number Packes: {} -- Number Shelves: {}".
@@ -239,9 +248,9 @@ class RoboticWarehouse(gym.Env):
             while identifier in self.packages:
                 identifier = random.randint(0, 2**32)
 
-            y, x = random.choice(self.shelve_positons)
+            y, x = random.choice(self.shelve_positions)
             while self.map[y][x] != RoboticWarehouse.SHELF:
-                y, x = random.choice(self.shelve_positons)
+                y, x = random.choice(self.shelve_positions)
 
             TO = np.array([0, 0])
 
@@ -274,23 +283,35 @@ class RoboticWarehouse(gym.Env):
 
         return (self.robots, self.packages.values()), 0, False, None
 
-    def __move_up(self, robot):
-        print("Moved Up")
+    def __move_up(self, robot: tuple) -> None:
+        return self.__move_direction(robot, RoboticWarehouse.UP)
 
-    def __move_down(self, robot):
-        print("Moved Down")
+    def __move_down(self, robot: tuple) -> None:
+        return self.__move_direction(robot, RoboticWarehouse.DOWN)
 
-    def __move_right(self, robot):
-        print("Moved Right")
+    def __move_right(self, robot: tuple) -> None:
+        return self.__move_direction(robot, RoboticWarehouse.RIGHT)
 
-    def __move_left(self, robot):
-        print("Moved Left")
+    def __move_left(self, robot: tuple) -> None:
+        return self.__move_direction(robot, RoboticWarehouse.LEFT)
 
-    def __pickup_package(self, robot):
-        print("Picked up Package")
+    def __pickup_package(self, robot: tuple) -> None:
+        print("Tried to pick up Package")
 
-    def __drop_package(self, robot):
-        print("Dropped Package")
+    def __drop_package(self, robot: tuple) -> None:
+        print("Tried to drop package")
+
+    def __move_direction(self, robot: tuple, direction: np.ndarray) -> None:
+        oy, ox = robot[0]
+        y, x = robot[0] + direction
+        if self.__within_map(y, x) and self.map[y][x] == RoboticWarehouse.FREE:
+            self.map[y][x], self.map[oy][ox] = self.map[oy][
+                ox], RoboticWarehouse.FREE
+
+            robot[0][0], robot[0][1] = y, x
+
+    def __within_map(self, y: int, x: int):
+        return (0 <= x < self.map_width and 0 <= y < self.map_height)
 
     def seed(self, seed: int) -> None:
         """ To make sure initialization is deterministic: set seeds yourself. """
@@ -343,3 +364,8 @@ class RoboticWarehouse(gym.Env):
 
     def __str__(self) -> str:
         return "RoboticWarehouse"
+
+
+class ActionSpace(gym.spaces.MultiDiscrete):
+    def __init__(self, robots: int, categories: int):
+        gym.spaces.MultiDiscrete.__init__(self, np.ones(robots) * 5)

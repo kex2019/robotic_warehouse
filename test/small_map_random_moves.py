@@ -9,14 +9,14 @@ import robotic_warehouse.robotic_warehouse as rw
 
 timestamp = time.time()
 gym = rw.RoboticWarehouse(
-    robots=1,
+    robots=1000,
     capacity=1,
     speed=1,
     spawn=10,
-    spawn_rate=1,
-    shelve_length=5,
-    shelve_height=2,
-    shelve_width=2,
+    spawn_rate=0.1,
+    shelve_length=40,
+    shelve_height=100,
+    shelve_width=100,
     shelve_throughput=1,
     cross_throughput=5)
 print("Setup Time: {}".format(time.time() - timestamp))
@@ -26,5 +26,5 @@ print("Setup Time: {}".format(time.time() - timestamp))
 while True:
     timestamp = time.time()
     gym.render()
-    print("Render Time: {}".format(time.time() - timestamp))
+    gym.step(gym.action_space.sample())
     time.sleep(0.1)
