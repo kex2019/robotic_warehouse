@@ -356,8 +356,16 @@ class RoboticWarehouse(gym.Env):
                     # Error color
                     bitmap[y][x] = np.array([1, 1, 1])
 
+        ratio = self.map_width / self.map_height
+        y_dim, x_dim = min(100 * self.map_height, 800), min(
+            100 * self.map_width * ratio, 800 * ratio)
+
+        if x_dim > y_dim and x_dim > 1000:
+            y_dim *= (800 / x_dim)
+            x_dim *= (800 / x_dim)
+
         dynamic_import["cv2"].imshow("Game", dynamic_import["cv2"].resize(
-            bitmap, (960, 540)))
+            bitmap, (int(x_dim), int(y_dim))))
         dynamic_import["cv2"].waitKey(1)
 
         return bitmap
