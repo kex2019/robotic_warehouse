@@ -8,7 +8,7 @@ setuptools.setup(
     description="Simulator of a robotic warehouse",
     url="https://github.com/kex2019/robotic_warehouse",
     packages=["robotic_warehouse"],
-    install_requires=["gym", "colorlog", "numpy"],
+    install_requires=["gym==0.10.5", "colorlog", "numpy==1.14.2"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
