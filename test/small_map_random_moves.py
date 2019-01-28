@@ -33,4 +33,3 @@ except KeyboardInterrupt:
     print("Number of steps: {}, average step per second: {}".format(
         steps, steps / (time.time() - timestamp)))
 
-Barcelona ?
