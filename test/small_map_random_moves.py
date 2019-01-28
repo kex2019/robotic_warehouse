@@ -11,7 +11,6 @@ timestamp = time.time()
 gym = rw.RoboticWarehouse(
     robots=10,
     capacity=1,
-    speed=1,
     spawn=10,
     spawn_rate=0.1,
     shelve_length=8,

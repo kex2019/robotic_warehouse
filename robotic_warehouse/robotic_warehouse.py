@@ -41,7 +41,6 @@ class RoboticWarehouse(gym.Env):
             self,
             robots: int = 1,  # Number of robots
             capacity: int = 1,  # Number of packages robot can carry
-            speed: np.float64 = 1,  # Speed of Robot
             spawn: int = 10,  # Initial packages spawned
             spawn_rate: np.float64 = 1,  #  Packages spawned every time t
             shelve_length: int = 2,  # length of a shelf
@@ -296,12 +295,11 @@ class RoboticWarehouse(gym.Env):
             If a robot issues drop or pickup in a position where it is not 
             supposed to be able to do that, nothing happends.
 
-        How do we handle different speeds?
         """
         for r, action in enumerate(actions):
-            self.__actions[action](self.robots[r])
+            reward = self.__actions[action](self.robots[r])
 
-        return (self.robots, self.packages.values()), 0, False, None
+        return (self.robots, self.packages.values()), reward, False, None
 
     def __move_up(self, robot: list) -> int:
         return self.__move_direction(robot, RoboticWarehouse.UP)
