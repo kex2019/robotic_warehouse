@@ -362,7 +362,7 @@ class RoboticWarehouse(gym.Env):
                 robot[1] = []
                 return score
 
-    def __move_direction(self, robot: tuple, direction: np.ndarray) -> int:
+    def __move_direction(self, robot: list, direction: np.ndarray) -> int:
         oy, ox = robot[0]
         y, x = robot[0] + direction
         if self.__within_map(y, x) and self.map[y][x] == RoboticWarehouse.FREE:

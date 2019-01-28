@@ -13,7 +13,7 @@ gym = rw.RoboticWarehouse(
     capacity=1,
     speed=1,
     spawn=10,
-    spawn_rate=0.0001,
+    spawn_rate=0.1,
     shelve_length=8,
     shelve_height=4,
     shelve_width=4,
@@ -32,3 +32,5 @@ try:
 except KeyboardInterrupt:
     print("Number of steps: {}, average step per second: {}".format(
         steps, steps / (time.time() - timestamp)))
+
+Barcelona ?
