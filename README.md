@@ -22,6 +22,11 @@ Installing this way won't permit rendering.
 - https://pypi.org/project/opencv-python/ is required to use rendering
 since it is quite a big dependency it is not included in the default installation
 
+To include rendering 
+```bash
+> pip3 install opencv-python
+```
+
 Usage
 ---
 ```python
