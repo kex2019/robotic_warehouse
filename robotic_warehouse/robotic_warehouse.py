@@ -1,7 +1,9 @@
 import gym
+import time
 import numpy as np
 import copy
 import random
+import heapq
 """ Setup some logging. """
 
 import logging
@@ -42,19 +44,17 @@ class RoboticWarehouse(gym.Env):
             robots: int = 1,  # Number of robots
             capacity: int = 1,  # Number of packages robot can carry
             spawn: int = 10,  # Initial packages spawned
-            spawn_rate: np.float64 = 1,  #  Packages spawned every time t
             shelve_length: int = 2,  # length of a shelf
             shelve_height: int = 2,  # number of shelves in a column (bad name?)
             shelve_width: int = 2,  # number of shelves in a row (bad name?)
             shelve_throughput: int = 1,  # number of robots that can pass
-            cross_throughput: int = 1):  # number of robots that can pass
+            cross_throughput: int = 1,  # number of robots that can pass
+            seed: int = 103  # Seed used to choose package spawns
+    ):  # How many places to spawn packages
         """ Number of packages a robot can hold. """
         self.capacity = capacity
         """ Remember this for environment resets. """
         self.inital_spawn = spawn
-        self.spawn = spawn
-        """ Remember this for incremental spawn. """
-        self.spawn_rate = spawn_rate
         """ Keep track of how many steps have been taken. """
         self.steps = 0
         """ Keep track of num_robots. """
@@ -129,6 +129,18 @@ class RoboticWarehouse(gym.Env):
         """ Add drops to map for visually pleasing graphics ^^. """
         for y, x in self.drop_positions:
             self.map[y][x] = RoboticWarehouse.DROP
+        """ To make sure same thing happends. """
+        random.seed(seed)
+        """ Package spawn positions. """
+        self.package_spawn_positions = list(
+            random.sample(self.shelve_positions, spawn))
+        """ Make sure there is a periodicity pattern to the positions aswell (Something something can learn? :)) """
+        self.package_spawn_times = [[0, random.randint(
+            2, 1000), i] for i in range(len(self.package_spawn_positions))]
+        """ Make into a heap. """
+        heapq.heapify(self.package_spawn_times)
+        """ To make sure not same thing happends from here (dont want all simulations to be equal ^^. """
+        random.seed(time.time())
 
         self.__setup_env()
 
@@ -181,26 +193,26 @@ class RoboticWarehouse(gym.Env):
         self.packages = {}
         for _ in range(self.inital_spawn):
 
-            if len(self.packages) == len(self.shelve_positions):
+            if len(self.packages) == len(self.package_spawn_positions):
                 logger.error(
                     "Cannot spawn more packages -- No Free positions -- Number Packes: {} -- Number Shelves: {}".
-                    format(len(self.packages), len(self.shelve_positions)))
+                    format(
+                        len(self.packages), len(self.package_spawn_positions)))
                 break
 
             identifier = np.random.randint(0, 2**32)
             while identifier in self.packages:
                 identifier = random.randint(0, 2**32)
 
-            y, x = random.choice(self.shelve_positions)
+            y, x = random.choice(self.package_spawn_positions)
             while self.map[y][x] != RoboticWarehouse.SHELF:
-                y, x = random.choice(self.shelve_positions)
+                y, x = random.choice(self.package_spawn_positions)
 
             # Where to drop of package
             TO = random.choice(self.drop_positions)
 
             self.packages[identifier] = (np.array([y, x]), TO)
             self.map[y][x] = RoboticWarehouse.PACKAGE(identifier)
-            self.spawn -= 1
         """Placing Robots"""
         self.robots = []
         for robot in range(self.num_robots):
@@ -229,7 +241,6 @@ class RoboticWarehouse(gym.Env):
             self.map[y][x] = RoboticWarehouse.ROBOT(robot)
 
     def reset(self) -> None:
-        self.spawn = self.inital_spawn
         self.__setup_env()
 
     def branch(self) -> "RoboticWarehouse":
@@ -254,29 +265,27 @@ class RoboticWarehouse(gym.Env):
 
             First spawn new packages
         """
-        self.spawn += self.spawn_rate
-        """ Monte carlo spawning of packages  """
-        for _ in range(int(self.spawn)):
-            if len(self.packages) == len(self.shelve_positions):
-                logger.error(
-                    "Cannot spawn more packages -- No Free positions -- Number Packes: {} -- Number Shelves: {}".
-                    format(len(self.packages), len(self.shelve_positions)))
-                break
+        """ Decrement all spawn-times. """
+        for i in range(len(self.package_spawn_times)):
+            """ Subtracting all with 1 will preserved heap structure. """
+            self.package_spawn_times[i][0] = self.package_spawn_times[i][0] - 1
+
+        while self.package_spawn_times[0][0] <= 0:
+            package = heapq.heappop(self.package_spawn_times)
 
             identifier = np.random.randint(0, 2**32)
             while identifier in self.packages:
                 identifier = random.randint(0, 2**32)
 
-            y, x = random.choice(self.shelve_positions)
-            while self.map[y][x] != RoboticWarehouse.SHELF:
-                y, x = random.choice(self.shelve_positions)
+            y, x = self.package_spawn_positions[package[2]]
+            if self.map[y][x] == RoboticWarehouse.SHELF:
+                TO = random.choice(self.drop_positions)
+                self.packages[identifier] = (np.array([y, x]), TO)
+                self.map[y][x] = RoboticWarehouse.PACKAGE(identifier)
 
-            TO = np.array([0, 0])
+            package[0] = package[1]
 
-            self.packages[identifier] = (np.array([y, x]), TO)
-            self.map[y][x] = RoboticWarehouse.PACKAGE(identifier)
-
-            self.spawn -= 1
+            heapq.heappush(self.package_spawn_times, package)
         """ 
         Now perform all actions and update map. 
 
@@ -373,11 +382,6 @@ class RoboticWarehouse(gym.Env):
 
     def __within_map(self, y: int, x: int):
         return (0 <= x < self.map_width and 0 <= y < self.map_height)
-
-    def seed(self, seed: int) -> None:
-        """ To make sure initialization is deterministic: set seeds yourself. """
-        random.seed(seed)
-        np.random.seed(seed)
 
     def render(self, mode: str = 'rgb_array') -> np.ndarray:
         global dynamic_import
