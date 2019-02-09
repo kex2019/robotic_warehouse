@@ -49,7 +49,9 @@ class RoboticWarehouse(gym.Env):
             shelve_width: int = 2,  # number of shelves in a row (bad name?)
             shelve_throughput: int = 1,  # number of robots that can pass
             cross_throughput: int = 1,  # number of robots that can pass
-            seed: int = 103  # Seed used to choose package spawns
+            seed: int = 103,  # Seed used to choose package spawns
+            periodicity_lower: int = 1,
+            periodicity_upper: int = 10000
     ):  # How many places to spawn packages
         """ Number of packages a robot can hold. """
         self.capacity = capacity
@@ -135,8 +137,9 @@ class RoboticWarehouse(gym.Env):
         self.package_spawn_positions = list(
             random.sample(self.shelve_positions, spawn))
         """ Make sure there is a periodicity pattern to the positions aswell (Something something can learn? :)) """
-        self.package_spawn_times = [[0, random.randint(
-            2, 1000), i] for i in range(len(self.package_spawn_positions))]
+        self.package_spawn_times = [[
+            0, random.randint(periodicity_lower, periodicity_upper), i
+        ] for i in range(len(self.package_spawn_positions))]
         """ Make into a heap. """
         heapq.heapify(self.package_spawn_times)
         """ To make sure not same thing happends from here (dont want all simulations to be equal ^^. """

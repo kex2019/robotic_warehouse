@@ -26,7 +26,7 @@ steps = 0
 timestamp = time.time()
 try:
     while True:
-        # gym.render()
+        gym.render()
         gym.step(gym.action_space.sample())
         steps += 1
         # time.sleep(0.1)
