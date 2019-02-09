@@ -383,7 +383,7 @@ class RoboticWarehouse(gym.Env):
 
         packages = []
         for drop_position in robot[1]:
-            if drop_position != None:
+            if all(drop_position != None):
                 packages.append(drop_position)
 
         robot[1] = packages
