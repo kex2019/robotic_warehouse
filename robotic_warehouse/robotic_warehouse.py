@@ -26,13 +26,16 @@ dynamic_import = {"cv2": None}
 
 
 class RoboticWarehouse(gym.Env):
-    FREE = 0
-    SHELF = 1
+    FREE_ID = 0
+    FREE = (0, -1)
+    SHELF_ID = 1
+    SHELF = (1, -1)
     PACKAGE_ID = 2
     PACKAGE = lambda x: (2, x)
     ROBOT_ID = 3
     ROBOT = lambda x: (3, x)
-    DROP = 4
+    DROP_ID = 4
+    DROP = (4, -1)
 
     UP = np.array([1, 0])
     DOWN = np.array([-1, 0])
@@ -399,10 +402,10 @@ class RoboticWarehouse(gym.Env):
         free_robot = 5
         robot_with_package = 6
         colors = {
-            RoboticWarehouse.FREE: np.array([.0, .0, .0]),
-            RoboticWarehouse.SHELF: np.array([0.5, 0.2, 0.05]),
+            RoboticWarehouse.FREE[0]: np.array([.0, .0, .0]),
+            RoboticWarehouse.SHELF[0]: np.array([0.5, 0.2, 0.05]),
             RoboticWarehouse.PACKAGE_ID: np.array([0.0, 0.8, 0]),
-            RoboticWarehouse.DROP: np.array([1.0, 0, 1.0]),
+            RoboticWarehouse.DROP[0]: np.array([1.0, 0, 1.0]),
             free_robot: np.array([0, 0, 0.8]),
             robot_with_package: np.array([0.0, 0.8, 0.8]),
         }
@@ -413,17 +416,13 @@ class RoboticWarehouse(gym.Env):
             for x in range(self.map_width):
                 at_pos = self.map[y][x]
 
-                if type(at_pos) != tuple:
-                    bitmap[y][x] = colors[at_pos]
-                elif at_pos[0] == 2:
-                    bitmap[y][x] = colors[2]
-                elif at_pos[0] == 3 and self.robots[at_pos[1]][1]:
-                    bitmap[y][x] = colors[robot_with_package]
-                elif at_pos[0] == 3:
-                    bitmap[y][x] = colors[free_robot]
+                if at_pos[0] == RoboticWarehouse.ROBOT_ID:
+                    if self.robots[at_pos[1]][1]:
+                        bitmap[y][x] = colors[robot_with_package]
+                    else:
+                        bitmap[y][x] = colors[free_robot]
                 else:
-                    # Error color
-                    bitmap[y][x] = np.array([1, 1, 1])
+                    bitmap[y][x] = colors[at_pos[0]]
 
         ratio = self.map_width / self.map_height
         y_dim, x_dim = min(100 * self.map_height, 800), min(
