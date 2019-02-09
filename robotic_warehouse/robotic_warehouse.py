@@ -115,15 +115,6 @@ class RoboticWarehouse(gym.Env):
         self.floor_positions = [(y, x) for y in range(self.map_height)
                                 for x in range(self.map_width)
                                 if (y, x) not in self.shelve_positions]
-        """ There is no need to have a sparse map. (Since they will be relativley small)"""
-        self.map = []
-        for y in range(self.map_height):
-            row = []
-            for x in range(self.map_width):
-                row.append(
-                    RoboticWarehouse.FREE if (y, x) not in
-                    self.shelve_positions else RoboticWarehouse.SHELF)
-            self.map.append(row)
         """ To make random choices O(1). """
         self.shelve_positions = list(self.shelve_positions)
         """ Drop positions. (These must be initialized before setup env.) """
@@ -133,14 +124,6 @@ class RoboticWarehouse(gym.Env):
             np.array([0, 1]),
             np.array([0, 2])
         ]
-        """ 
-        For fast lookups if we ever have 
-        A lot of drop positions and they are not dynamic. """
-        self.drop_positions_set = set(
-            map(lambda a: a.tostring(), self.drop_positions))
-        """ Add drops to map for visually pleasing graphics ^^. """
-        for y, x in self.drop_positions:
-            self.map[y][x] = RoboticWarehouse.DROP
         """ To make sure same thing happends. """
         random.seed(seed)
         """ Package spawn positions. """
@@ -167,6 +150,18 @@ class RoboticWarehouse(gym.Env):
         self.observation_space = None
 
     def __setup_env(self) -> None:
+        """ Setup map first. There is no need to have a sparse map. (Since they will be relativley small)"""
+        self.map = []
+        for y in range(self.map_height):
+            row = []
+            for x in range(self.map_width):
+                row.append(
+                    RoboticWarehouse.FREE if (y, x) not in
+                    self.shelve_positions else RoboticWarehouse.SHELF)
+            self.map.append(row)
+        """ Add drops to map for visually pleasing graphics ^^. """
+        for y, x in self.drop_positions:
+            self.map[y][x] = RoboticWarehouse.DROP
         """ 
         Keep track of packages and spawn initial packages. 
         
@@ -188,6 +183,8 @@ class RoboticWarehouse(gym.Env):
             Use a dict (hashmap)
                 Key:  Some identifier (E.g) random int
                 Value: Tuple (From, To)
+                    From: np.ndarray of [Y, X]
+                    To: np.ndarray of [Y, X]
 
             Complexities:
                 P = packages / shelves
@@ -246,15 +243,15 @@ class RoboticWarehouse(gym.Env):
                         1: Robot X position
                     1: 
                         X: [Package]
-                            Package: [From, To]
-                                From: [Y, X]
+                            Package: [To]
                                 To: [Y, X]
             """
             self.robots.append([np.array([y, x]), []])
             self.map[y][x] = RoboticWarehouse.ROBOT(robot)
 
-    def reset(self) -> None:
+    def reset(self) -> (('robots', 'packages'), np.float64, bool, None):
         self.__setup_env()
+        return (self.robots, list(self.packages.values())), 0, False, None
 
     def branch(self) -> "RoboticWarehouse":
         """ Naive implementation for algorithms that need to search future states """
@@ -321,7 +318,7 @@ class RoboticWarehouse(gym.Env):
         for r, action in enumerate(actions):
             reward = self.__actions[action](self.robots[r])
 
-        return (self.robots, self.packages.values()), reward, False, None
+        return (self.robots, list(self.packages.values())), reward, False, None
 
     def __move_up(self, robot: list) -> int:
         return self.__move_direction(robot, RoboticWarehouse.UP)
@@ -347,9 +344,10 @@ class RoboticWarehouse(gym.Env):
                 RoboticWarehouse.RIGHT + robot[0]
         ]:
             y, x = package
-            if self.__within_map(y, x) and type(
-                    self.map[y][x]
-            ) == tuple and self.map[y][x][0] == RoboticWarehouse.PACKAGE_ID:
+            if self.in_map(
+                    y, x
+            ) and self.map[y][x][0] == RoboticWarehouse.PACKAGE_ID and len(
+                    robot[1]) < self.capacity:
                 """ 
                     Now add package to robot. 
 
@@ -357,8 +355,8 @@ class RoboticWarehouse(gym.Env):
                         1: Package is also removed from map
                         2: Package is also removed from the free map
                 """
-                """ Add package to robot. """
-                robot[1].append(self.packages[self.map[y][x][1]])
+                """ Add package to robot. (Only add To positon, will never need from.. (I hope)) """
+                robot[1].append(self.packages[self.map[y][x][1]][1])
                 """ Remove package from free packages. """
                 del self.packages[self.map[y][x][1]]
                 """ Remove package from map. """
@@ -371,21 +369,30 @@ class RoboticWarehouse(gym.Env):
         if len(robot[1]) == 0:
             return 0
 
-        for drop_position in [
+        score = 0
+        for adjacent_position in [
                 RoboticWarehouse.UP + robot[0],
                 RoboticWarehouse.DOWN + robot[0],
                 RoboticWarehouse.LEFT + robot[0],
                 RoboticWarehouse.RIGHT + robot[0]
         ]:
-            if drop_position.tostring() in self.drop_positions_set:
-                score = len(robot[1])
-                robot[1] = []
-                return score
+            for drop_position in range(len(robot[1])):
+                if all(robot[1][drop_position] == adjacent_position):
+                    score += 1
+                    del robot[1][drop_position]
+
+        packages = []
+        for drop_position in robot[1]:
+            if drop_position != None:
+                packages.append(drop_position)
+
+        robot[1] = packages
+        return score
 
     def __move_direction(self, robot: list, direction: np.ndarray) -> int:
         oy, ox = robot[0]
         y, x = robot[0] + direction
-        if self.__within_map(y, x) and self.map[y][x] == RoboticWarehouse.FREE:
+        if self.in_map(y, x) and self.map[y][x] == RoboticWarehouse.FREE:
             self.map[y][x], self.map[oy][ox] = self.map[oy][
                 ox], RoboticWarehouse.FREE
 
@@ -393,7 +400,7 @@ class RoboticWarehouse(gym.Env):
 
         return 0
 
-    def __within_map(self, y: int, x: int):
+    def in_map(self, y: int, x: int):
         return (0 <= x < self.map_width and 0 <= y < self.map_height)
 
     def render(self, mode: str = 'rgb_array') -> np.ndarray:

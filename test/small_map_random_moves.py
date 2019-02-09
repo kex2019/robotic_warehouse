@@ -7,8 +7,6 @@ sys.path.append(os.getcwd())
 
 import robotic_warehouse.robotic_warehouse as rw
 
-print(rw.__file__)
-print(dir(rw))
 timestamp = time.time()
 gym = rw.RoboticWarehouse(
     robots=10,

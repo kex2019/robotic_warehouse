@@ -1,1 +1,4 @@
 .ropeproject/
+RoboticWareHouse.egg-info/
+build/
+dist/
