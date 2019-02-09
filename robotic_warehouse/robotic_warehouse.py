@@ -37,6 +37,13 @@ class RoboticWarehouse(gym.Env):
     DROP_ID = 4
     DROP = (4, -1)
 
+    DOWN_INSTRUCTION = 0
+    LEFT_INSTRUCTION = 1
+    UP_INSTRUCTION = 2
+    RIGHT_INSTRUCTION = 3
+    PICKUP_INSTRUCTION = 4
+    DROP_INSTRUCTION = 5
+
     UP = np.array([1, 0])
     DOWN = np.array([-1, 0])
     LEFT = np.array([0, -1])
