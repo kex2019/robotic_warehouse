@@ -11,12 +11,12 @@ timestamp = time.time()
 gym = rw.RoboticWarehouse(
     robots=10,
     capacity=1,
-    spawn=100,
-    shelve_length=10,
-    shelve_height=10,
-    shelve_width=10,
+    spawn=10,
+    shelve_length=2,
+    shelve_height=2,
+    shelve_width=2,
     shelve_throughput=1,
-    cross_throughput=5,
+    cross_throughput=2,
     seed=105)
 print("Setup Time: {}".format(time.time() - timestamp))
 

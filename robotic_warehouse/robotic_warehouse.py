@@ -26,16 +26,13 @@ dynamic_import = {"cv2": None}
 
 
 class RoboticWarehouse(gym.Env):
-    FREE_ID = 0
-    FREE = (0, -1)
+    TILE_ID = 0
+    TILE = [0, 0]
     SHELF_ID = 1
-    SHELF = (1, -1)
+    SHELF = [1, 0]
     PACKAGE_ID = 2
-    PACKAGE = lambda x: (2, x)
-    ROBOT_ID = 3
-    ROBOT = lambda x: (3, x)
     DROP_ID = 4
-    DROP = (4, -1)
+    DROP = [4, 0]
 
     DOWN_INSTRUCTION = 0
     LEFT_INSTRUCTION = 1
@@ -126,6 +123,10 @@ class RoboticWarehouse(gym.Env):
         ]
         """ To make sure same thing happends. """
         random.seed(seed)
+        if spawn > len(self.shelve_positions):
+            raise Exception(
+                "Not enough shelves {} to spawn {} packages".format(
+                    len(self.shelve_positions), spawn))
         """ Package spawn positions. """
         self.package_spawn_positions = list(
             random.sample(self.shelve_positions, spawn))
@@ -151,17 +152,20 @@ class RoboticWarehouse(gym.Env):
 
     def __setup_env(self) -> None:
         """ Setup map first. There is no need to have a sparse map. (Since they will be relativley small)"""
+        self.shelve_positions = set(self.shelve_positions)
         self.map = []
         for y in range(self.map_height):
             row = []
             for x in range(self.map_width):
-                row.append(
-                    RoboticWarehouse.FREE if (y, x) not in
-                    self.shelve_positions else RoboticWarehouse.SHELF)
+                if (y, x) in self.shelve_positions:
+                    row.append([RoboticWarehouse.SHELF_ID, 0])
+                else:
+                    row.append([RoboticWarehouse.TILE_ID, 0])
             self.map.append(row)
+        self.shelve_positions = list(self.shelve_positions)
         """ Add drops to map for visually pleasing graphics ^^. """
         for y, x in self.drop_positions:
-            self.map[y][x] = RoboticWarehouse.DROP
+            self.map[y][x][0] = RoboticWarehouse.DROP_ID
         """ 
         Keep track of packages and spawn initial packages. 
         
@@ -202,7 +206,6 @@ class RoboticWarehouse(gym.Env):
 
         self.packages = {}
         for _ in range(self.inital_spawn):
-
             if len(self.packages) == len(self.package_spawn_positions):
                 logger.error(
                     "Cannot spawn more packages -- No Free positions -- Number Packes: {} -- Number Shelves: {}".
@@ -215,27 +218,19 @@ class RoboticWarehouse(gym.Env):
                 identifier = random.randint(0, 2**32)
 
             y, x = random.choice(self.package_spawn_positions)
-            while self.map[y][x] != RoboticWarehouse.SHELF:
+            while self.map[y][x][0] != RoboticWarehouse.SHELF_ID:
                 y, x = random.choice(self.package_spawn_positions)
 
             # Where to drop of package
             TO = random.choice(self.drop_positions)
 
             self.packages[identifier] = (np.array([y, x]), TO)
-            self.map[y][x] = RoboticWarehouse.PACKAGE(identifier)
+            self.map[y][x][0], self.map[y][x][
+                1] = RoboticWarehouse.PACKAGE_ID, identifier
         """Placing Robots"""
         self.robots = []
         for robot in range(self.num_robots):
-
-            if len(self.robots) == len(self.floor_positions):
-                logger.error(
-                    "Cannot spawn more robots -- No Free positions -- Number robots: {} -- Number floor positions: {}".
-                    format(len(self.robots), len(self.floor_positions)))
-                break
-
             y, x = random.choice(self.floor_positions)
-            while self.map[y][x] != RoboticWarehouse.FREE:
-                y, x = random.choice(self.floor_positions)
             """
                 A Robot is a List (Need to mutate top level data so cant be tuple)
                     0: 
@@ -247,7 +242,10 @@ class RoboticWarehouse(gym.Env):
                                 To: [Y, X]
             """
             self.robots.append([np.array([y, x]), []])
-            self.map[y][x] = RoboticWarehouse.ROBOT(robot)
+            """ One more robot standing at that position. """
+            self.map[y][x][1] += 1
+        """ For Graphics. """
+        self.bitmap = np.zeros((self.map_height, self.map_width, 3))
 
     def reset(self) -> (('robots', 'packages'), np.float64, bool, None):
         self.__setup_env()
@@ -291,10 +289,11 @@ class RoboticWarehouse(gym.Env):
             if self.map[y][x] == RoboticWarehouse.SHELF:
                 TO = random.choice(self.drop_positions)
                 self.packages[identifier] = (np.array([y, x]), TO)
-                self.map[y][x] = RoboticWarehouse.PACKAGE(identifier)
-
+                self.map[y][x][0], self.map[y][x][
+                    1] = RoboticWarehouse.PACKAGE_ID, identifier
+            """ Reset Spawn Timer. """
             package[0] = package[1]
-
+            """ Add to queue. """
             heapq.heappush(self.package_spawn_times, package)
         """ 
         Now perform all actions and update map. 
@@ -317,7 +316,7 @@ class RoboticWarehouse(gym.Env):
         """
         for r, action in enumerate(actions):
             reward = self.__actions[action](self.robots[r])
-
+        """ Maybe there is some better choice for storing packages.. """
         return (self.robots, list(self.packages.values())), reward, False, None
 
     def __move_up(self, robot: list) -> int:
@@ -360,7 +359,8 @@ class RoboticWarehouse(gym.Env):
                 """ Remove package from free packages. """
                 del self.packages[self.map[y][x][1]]
                 """ Remove package from map. """
-                self.map[y][x] = RoboticWarehouse.SHELF
+                self.map[y][x][0], self.map[y][x][
+                    1] = RoboticWarehouse.SHELF_ID, 0
 
         return 0
 
@@ -380,7 +380,7 @@ class RoboticWarehouse(gym.Env):
                 if all(robot[1][drop_position] == adjacent_position):
                     score += 1
                     del robot[1][drop_position]
-
+        """ Remove all packages we have dropped. """
         packages = []
         for drop_position in robot[1]:
             if all(drop_position != None):
@@ -392,13 +392,30 @@ class RoboticWarehouse(gym.Env):
     def __move_direction(self, robot: list, direction: np.ndarray) -> int:
         oy, ox = robot[0]
         y, x = robot[0] + direction
-        if self.in_map(y, x) and self.map[y][x] == RoboticWarehouse.FREE:
-            self.map[y][x], self.map[oy][ox] = self.map[oy][
-                ox], RoboticWarehouse.FREE
-
+        """ Ofc we can move in direction if it is free. """
+        if self.in_map(y, x) and self.map[y][x] == RoboticWarehouse.TILE:
+            """ One more robot now at that tile. """
+            self.map[y][x][1] += 1
+            """ One less robot at this tile. """
+            self.map[oy][ox][1] = self.map[oy][ox][1] - 1
+            """ Update Robot position. """
             robot[0][0], robot[0][1] = y, x
 
-        return 0
+            return 0
+        """ 
+        But we want to support moving in direction when robot is there too,
+        i want this to be a seperate if clause to be explicit in the case we want to 
+        change in the future.
+        """
+        if self.in_map(y, x) and self.map[y][x][0] == RoboticWarehouse.TILE_ID:
+            """ One more robot now at that tile. """
+            self.map[y][x][1] += 1
+            """ One less robot at this tile. """
+            self.map[oy][ox][1] = self.map[oy][ox][1] - 1
+            """ Update robot position. """
+            robot[0][0], robot[0][1] = y, x
+            """ Penalize Collision. """
+            return -1
 
     def in_map(self, y: int, x: int):
         return (0 <= x < self.map_width and 0 <= y < self.map_height)
@@ -413,30 +430,28 @@ class RoboticWarehouse(gym.Env):
         if dynamic_import["cv2"] == None:
             dynamic_import["cv2"] = __import__("cv2")
 
-        free_robot = 5
-        robot_with_package = 6
         colors = {
-            RoboticWarehouse.FREE[0]: np.array([.0, .0, .0]),
-            RoboticWarehouse.SHELF[0]: np.array([0.5, 0.2, 0.05]),
+            RoboticWarehouse.TILE_ID: np.array([.0, .0, .0]),
+            RoboticWarehouse.SHELF_ID: np.array([0.5, 0.2, 0.05]),
             RoboticWarehouse.PACKAGE_ID: np.array([0.0, 0.8, 0]),
-            RoboticWarehouse.DROP[0]: np.array([1.0, 0, 1.0]),
-            free_robot: np.array([0, 0, 0.8]),
-            robot_with_package: np.array([0.0, 0.8, 0.8]),
+            RoboticWarehouse.DROP_ID: np.array([1.0, 0, 1.0]),
         }
-
-        bitmap = np.zeros((self.map_height, self.map_width, 3))
-
+        """ Fill Map. """
         for y in range(self.map_height):
             for x in range(self.map_width):
                 at_pos = self.map[y][x]
+                if self.map[y][x][0] in colors:
+                    self.bitmap[y][x] = colors[self.map[y][x][0]]
 
-                if at_pos[0] == RoboticWarehouse.ROBOT_ID:
-                    if self.robots[at_pos[1]][1]:
-                        bitmap[y][x] = colors[robot_with_package]
-                    else:
-                        bitmap[y][x] = colors[free_robot]
-                else:
-                    bitmap[y][x] = colors[at_pos[0]]
+        robot_package_color = np.array([0, 0.8, 0.8])
+        robot_color = np.array([0, 0, 0.8])
+        """ Place robots. """
+        for robot in self.robots:
+            y, x = robot[0]
+            if robot[1]:
+                self.bitmap[y][x] = robot_package_color
+            else:
+                self.bitmap[y][x] = robot_color
 
         ratio = self.map_width / self.map_height
         y_dim, x_dim = min(100 * self.map_height, 800), min(
@@ -447,10 +462,10 @@ class RoboticWarehouse(gym.Env):
             x_dim *= (800 / x_dim)
 
         dynamic_import["cv2"].imshow("Game", dynamic_import["cv2"].resize(
-            bitmap, (int(x_dim), int(y_dim))))
+            self.bitmap, (int(x_dim), int(y_dim))))
         dynamic_import["cv2"].waitKey(1)
 
-        return bitmap
+        return self.bitmap
 
     def __str__(self) -> str:
         return "RoboticWarehouse"
