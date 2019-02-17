@@ -2,3 +2,4 @@
 RoboticWareHouse.egg-info/
 build/
 dist/
+robotic_warehouse/__pycache__/*
