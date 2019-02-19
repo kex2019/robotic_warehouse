@@ -35,6 +35,7 @@ class Package(object):
         self.map_reference = map_reference
 
 
+
 class Robot(object):
     def __init__(self, position: [], packages: []):
         self.position = position
@@ -161,6 +162,8 @@ class RoboticWarehouse(gym.Env):
         self.action_space = ActionSpace(robots, len(self.__actions))
         # TODO: ...
         self.observation_space = None
+        self.round_collisions = 0
+        self.round_dropoffs = []
 
     def __setup_env(self) -> None:
         """ Setup map first. There is no need to have a sparse map. (Since they will be relativley small)"""
@@ -280,6 +283,8 @@ class RoboticWarehouse(gym.Env):
 
             First spawn new packages
         """
+        self.round_collisions = 0
+        self.round_dropoffs = []
         """ Decrement all spawn-times. """
         for i in range(len(self.package_spawn_times)):
             """ Subtracting all with 1 will preserved heap structure. """
@@ -323,8 +328,9 @@ class RoboticWarehouse(gym.Env):
             supposed to be able to do that, nothing happends.
 
         """
+        reward = 0
         for r, action in enumerate(actions):
-            reward = self.__actions[action](self.robots[r])
+            reward += self.__actions[action](self.robots[r])
         """ Increment steps. """
         self.steps += 1
         """ Maybe there is some better choice for storing packages.. """
@@ -405,6 +411,7 @@ class RoboticWarehouse(gym.Env):
             for package_index in range(len(robot.packages)):
                 if robot.packages[package_index].dropoff == adjacent_position:
                     score += 1
+                    self.round_dropoffs.append(robot.packages[package_index])
                     del robot.packages[package_index]
         """ Remove all packages we have dropped. """
 
@@ -421,12 +428,10 @@ class RoboticWarehouse(gym.Env):
             self.map[oy][ox][1] = self.map[oy][ox][1] - 1
             """ Update Robot position. """
             robot.position[0], robot.position[1] = y, x
-            """ Moved to a free tile. """
-            if self.map[y][x][1] == 1:
-                return 0
-            else:
-                """ Collised with other robot. """
-                return -1
+            """ if collision. """
+            if self.map[y][x][1] > 1:
+                self.round_collisions += 1
+            return 0
 
     def in_map(self, y: int, x: int):
         return (0 <= x < self.map_width and 0 <= y < self.map_height)
