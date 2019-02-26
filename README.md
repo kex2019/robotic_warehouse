@@ -36,12 +36,11 @@ gym = rw.RoboticWarehouse(
     robots=4, # Number of robots on the map
     capacity=1, # Number of packages each robot can carry
     spawn=10, # Number of packages spawned in begining
-    spawn_rate=0.001, # Number of packages spawned each step
     shelve_length=4, # The length of a shelve
     shelve_height=2, # The number of shelves on y axis (Will fix variable name.. :))
-    shelve_width=2, # The number of shelves on x axis (Will fix variable name.. :))
-    shelve_throughput=1, # Number of robots that can pass between shelves
-    cross_throughput=5) # Number of robots that can pass in other places
+    shelve_width=2) # Number of robots that can pass in other places
+
+    ## See the code for more constructor options
 
 
 while True:
@@ -65,16 +64,24 @@ Observation Space
 ---
 This is yet to be decided but at the moment it is
 - A tuple (robots, packages)
-  - Robots is a list of robot [Robot]
-    - Robot is a list of two items [Position, Packages]
-      - Position tuple: [Y, X]
-      - Packages [Package]
-        - Package tuple: [From, To] (Where it is supposed to be taken from and to)
-          - From: [Y, X]
-          - To: [Y, X]
-  - Packages is a list of Package [Package]
-    -  (Same as each robot has)
 
+```python
+class Package(object):
+    def __init__(self, identifier: int, start: [], dropoff: [], spawn: int,
+                 map_reference: "RoboticWarehouse"):
+        self.identifier = identifier
+        self.start = start
+        self.dropoff = dropoff
+        self.spawn = spawn
+        self.map_reference = map_reference
+```
+
+```python
+class Robot(object):
+    def __init__(self, position: [], packages: []):
+        self.position = position
+        self.packages = packages
+```
 
 Performance
 ---
@@ -90,7 +97,7 @@ It is the 'big' map rendered in the example below
 
 Running on a MacBook Pro 2014 with Intel i7 CPU
 - With rendering ~ 100 steps per second
-- Without rendering ~ 200000 steps per second
+- Without rendering ~ 20000 steps per second
 
 Examples
 ---
