@@ -351,7 +351,7 @@ class RoboticWarehouse(gym.Env):
     def __pickup_package(self, robot: Robot) -> int:
         """ Don't pick up anything if capacity is full. """
         if len(robot.packages) >= self.capacity:
-            return
+            return 0
         """ Currently only picks in a grid.. maybe add diagonals?. """
 
         for adjacent_position in [[
@@ -431,7 +431,7 @@ class RoboticWarehouse(gym.Env):
             """ if collision. """
             if self.map[y][x][1] > 1:
                 self.round_collisions += 1
-            return 0
+        return 0
 
     def in_map(self, y: int, x: int):
         return (0 <= x < self.map_width and 0 <= y < self.map_height)
