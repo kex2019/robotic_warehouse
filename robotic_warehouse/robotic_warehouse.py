@@ -35,7 +35,6 @@ class Package(object):
         self.map_reference = map_reference
 
 
-
 class Robot(object):
     def __init__(self, position: [], packages: []):
         self.position = position
@@ -408,14 +407,18 @@ class RoboticWarehouse(gym.Env):
                 RoboticWarehouse.RIGHT[0] + robot.position[0],
                 RoboticWarehouse.RIGHT[1] + robot.position[1]
         ]]:
+            dropped_packages = []
             for package_index in range(len(robot.packages)):
                 if robot.packages[package_index].dropoff == adjacent_position:
                     score += 1
                     self.round_dropoffs.append(robot.packages[package_index])
-                    del robot.packages[package_index]
-        """ Remove all packages we have dropped. """
+                    dropped_packages.append(package_index)
+            """ Remove all packages we have dropped. """
+            offset = 0
+            for drop in dropped_packages:
+                del robot.packages[drop - offset]
+                offset += 1
 
-        robot.packages = list(filter(None, robot.packages))
         return score
 
     def __move_direction(self, robot: Robot, direction: np.ndarray) -> int:
