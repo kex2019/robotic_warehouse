@@ -74,7 +74,7 @@ class RoboticWarehouse(gym.Env):
             shelve_throughput: int = 1,  # number of robots that can pass
             cross_throughput: int = 1,  # number of robots that can pass
             seed: int = 103,  # Seed used to choose package spawns
-            periodicity_lower: int = 600,
+            periodicity_lower: int = 400,
             periodicity_upper: int = 1000
     ):  # How many places to spawn packages
         """ Number of packages a robot can hold. """
