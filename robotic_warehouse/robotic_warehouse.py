@@ -255,10 +255,10 @@ class RoboticWarehouse(gym.Env):
             RoboticWarehouse.DROP_ID: np.array([1.0, 0, 1.0]),
         }
 
-    def reset(self) -> (('robots', 'packages'), np.float64, bool, None):
+    def reset(self) -> ('robots', 'packages'):
         self.steps = 0
         self.__setup_env()
-        return (self.robots, list(self.packages.values())), 0, False, None
+        return (self.robots, list(self.packages.values()))
 
     def branch(self) -> "RoboticWarehouse":
         """ Naive implementation for algorithms that need to search future states """

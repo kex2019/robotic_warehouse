@@ -9,10 +9,10 @@ import robotic_warehouse.robotic_warehouse as rw
 
 timestamp = time.time()
 gym = rw.RoboticWarehouse(
-    robots=10,
+    robots=2,
     capacity=1,
-    spawn=10,
-    shelve_length=2,
+    spawn=5,
+    shelve_length=5,
     shelve_height=2,
     shelve_width=2,
     shelve_throughput=1,
