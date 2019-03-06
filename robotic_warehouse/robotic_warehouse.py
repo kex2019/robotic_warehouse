@@ -380,19 +380,20 @@ class RoboticWarehouse(gym.Env):
                         2: Package is also removed from the free map
                 """
                 """ Add package to robot. (Only add To positon, will never need from.. (I hope)) """
-                possibilities.append(self.packages[self.map[y][x][1]])
+                possibilities.append((y, x))
 
-        for item in possibilities:
-            if item in robot.reservations and len(
+        for y, x in possibilities:
+            package = self.packages[self.map[y][x][1]]
+            if package in robot.reservations and len(
                     robot.packages) <= self.capacity:
-                robot.packages.append(self.packages[self.map[y][x][1]])
+                robot.packages.append(package)
                 """ Remove package from free packages. """
                 del self.packages[self.map[y][x][1]]
                 """ Remove package from map. """
                 self.map[y][x][0], self.map[y][x][
                     1] = RoboticWarehouse.SHELF_ID, 0
                 """ Remove from reservations. """
-                robot.reservations.remove(item)
+                robot.reservations.remove(package)
 
         return 0
 
