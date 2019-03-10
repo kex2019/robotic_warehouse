@@ -86,6 +86,8 @@ class RoboticWarehouse(gym.Env):
         self.steps = 0
         """ Keep track of num_robots. """
         self.num_robots = robots
+        """ Seed to make sure same behavior. """
+        self.seed = seed
         """ 
         The map. 
         ---------------------------
