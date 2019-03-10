@@ -81,7 +81,7 @@ class RoboticWarehouse(gym.Env):
         """ Number of packages a robot can hold. """
         self.capacity = capacity
         """ Remember this for environment resets. """
-        self.inital_spawn = spawn
+        self.initial_spawn = spawn
         """ Keep track of how many steps have been taken. """
         self.steps = 0
         """ Keep track of num_robots. """
@@ -221,7 +221,7 @@ class RoboticWarehouse(gym.Env):
         """
 
         self.packages = {}
-        for _ in range(self.inital_spawn):
+        for _ in range(self.initial_spawn):
             if len(self.packages) == len(self.package_spawn_positions):
                 logger.error(
                     "Cannot spawn more packages -- No Free positions -- Number Packes: {} -- Number Shelves: {}".
