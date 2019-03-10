@@ -148,7 +148,8 @@ class RoboticWarehouse(gym.Env):
             random.sample(self.shelve_positions, spawn))
         """ Make sure there is a periodicity pattern to the positions aswell (Something something can learn? :)) """
         self.package_spawn_times = [[
-            0, random.randint(periodicity_lower, periodicity_upper), i
+            random.randint(periodicity_lower, periodicity_upper),
+            random.randint(periodicity_lower, periodicity_upper), i
         ] for i in range(len(self.package_spawn_positions))]
         """ Make into a heap. """
         heapq.heapify(self.package_spawn_times)
@@ -221,28 +222,28 @@ class RoboticWarehouse(gym.Env):
         """
 
         self.packages = {}
-        for _ in range(self.initial_spawn):
-            if len(self.packages) == len(self.package_spawn_positions):
-                logger.error(
-                    "Cannot spawn more packages -- No Free positions -- Number Packes: {} -- Number Shelves: {}".
-                    format(
-                        len(self.packages), len(self.package_spawn_positions)))
-                break
+        # for _ in range(self.initial_spawn):
+        # if len(self.packages) == len(self.package_spawn_positions):
+        # logger.error(
+        # "Cannot spawn more packages -- No Free positions -- Number Packes: {} -- Number Shelves: {}".
+        # format(
+        # len(self.packages), len(self.package_spawn_positions)))
+        # break
 
-            identifier = np.random.randint(0, 2**32)
-            while identifier in self.packages:
-                identifier = random.randint(0, 2**32)
+        # identifier = np.random.randint(0, 2**32)
+        # while identifier in self.packages:
+        # identifier = random.randint(0, 2**32)
 
-            y, x = random.choice(self.package_spawn_positions)
-            while self.map[y][x][0] != RoboticWarehouse.SHELF_ID:
-                y, x = random.choice(self.package_spawn_positions)
+        # y, x = random.choice(self.package_spawn_positions)
+        # while self.map[y][x][0] != RoboticWarehouse.SHELF_ID:
+        # y, x = random.choice(self.package_spawn_positions)
 
-            self.packages[identifier] = Package(identifier, [y, x],
-                                                random.choice(
-                                                    self.drop_positions),
-                                                self.steps, self)
-            self.map[y][x][0], self.map[y][x][
-                1] = RoboticWarehouse.PACKAGE_ID, identifier
+        # self.packages[identifier] = Package(identifier, [y, x],
+        # random.choice(
+        # self.drop_positions),
+        # self.steps, self)
+        # self.map[y][x][0], self.map[y][x][
+        # 1] = RoboticWarehouse.PACKAGE_ID, identifier
         """Placing Robots"""
         self.robots = []
         for robot in range(self.num_robots):
